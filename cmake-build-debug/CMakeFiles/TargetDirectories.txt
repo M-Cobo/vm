@@ -1,0 +1,3 @@
+/home/cobo/CLionProjects/vm/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/cobo/CLionProjects/vm/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/cobo/CLionProjects/vm/cmake-build-debug/CMakeFiles/vm.dir
