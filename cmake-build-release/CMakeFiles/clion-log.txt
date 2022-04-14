@@ -1,4 +1,4 @@
-/Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" /Users/cjorge/CLionProjects/vm
+/Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" /Users/cjorge/CLionProjects/vm
 -- The C compiler identification is AppleClang 13.0.0.13000029
 -- The CXX compiler identification is AppleClang 13.0.0.13000029
 -- Detecting C compiler ABI info
@@ -13,4 +13,4 @@
 -- Detecting CXX compile features - done
 -- Configuring done
 -- Generating done
--- Build files have been written to: /Users/cjorge/CLionProjects/vm/cmake-build-debug
+-- Build files have been written to: /Users/cjorge/CLionProjects/vm/cmake-build-release
