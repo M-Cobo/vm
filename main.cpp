@@ -54,6 +54,16 @@ enum
     OP_TRAP, /* execute trap */
 };
 
+enum
+{
+    TRAP_GETC = 0X20, /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0X21, /* output a character */
+    TRAP_PUTS = 0X22, /* output a word string */
+    TRAP_IN = 0X23, /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0X24, /* output a byte string */
+    TRAP_HALT = 0X25, /* halt the program */
+};
+
 #define MEMORY_MAX (1 << 16)
 uint16_t memory[MEMORY_MAX]; /* 65536 locations */
 uint16_t reg[R_COUNT];
