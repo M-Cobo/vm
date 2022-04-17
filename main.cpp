@@ -1,14 +1,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
-#include <cstring>
 #include <csignal>
 /* unix */
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <ctime>
-#include <sys/types.h>
 #include <sys/termios.h>
 #include <sys/mman.h>
 
@@ -22,9 +19,9 @@ enum
     R_R5,
     R_R6,
     R_R7,
-    R_PC, /* program counter*/
+    R_PC, /* program counter */
     R_COND,
-    R_COUNT,
+    R_COUNT
 };
 
 enum
@@ -37,21 +34,21 @@ enum
 enum
 {
     OP_BR = 0, /* branch */
-    OP_ADD, /* add */
-    OP_LD, /* load */
-    OP_ST, /* store */
-    OP_JSR, /* jump register */
-    OP_AND, /* bitwise and */
-    OP_LDR, /* load register */
-    OP_STR, /* store register */
-    OP_RTI, /* unused */
-    OP_NOT, /* bitwise not */
-    OP_LDI, /* load indirect */
-    OP_STI, /* store indirect */
-    OP_JMP, /* jump */
-    OP_RES, /* reserve (unused) */
-    OP_LEA, /* load effective address */
-    OP_TRAP, /* execute trap */
+    OP_ADD,    /* add */
+    OP_LD,     /* load */
+    OP_ST,     /* store */
+    OP_JSR,    /* jump register */
+    OP_AND,    /* bitwise and */
+    OP_LDR,    /* load register */
+    OP_STR,    /* store register */
+    OP_RTI,    /* unused */
+    OP_NOT,    /* bitwise not */
+    OP_LDI,    /* load indirect */
+    OP_STI,    /* store indirect */
+    OP_JMP,    /* jump */
+    OP_RES,    /* reserved (unused) */
+    OP_LEA,    /* load effective address */
+    OP_TRAP    /* execute trap */
 };
 
 enum
@@ -62,12 +59,12 @@ enum
 
 enum
 {
-    TRAP_GETC = 0X20, /* get character from keyboard, not echoed onto the terminal */
-    TRAP_OUT = 0X21, /* output a character */
-    TRAP_PUTS = 0X22, /* output a word string */
-    TRAP_IN = 0X23, /* get character from keyboard, echoed onto the terminal */
-    TRAP_PUTSP = 0X24, /* output a byte string */
-    TRAP_HALT = 0X25, /* halt the program */
+    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0x21,   /* output a character */
+    TRAP_PUTS = 0x22,  /* output a word string */
+    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0x24, /* output a byte string */
+    TRAP_HALT = 0x25   /* halt the program */
 };
 
 #define MEMORY_MAX (1 << 16)
@@ -78,7 +75,7 @@ uint16_t sign_extend(uint16_t x, int bit_count)
 {
     if ((x >> (bit_count - 1)) & 1)
     {
-        x |= (0xffff << bit_count);
+        x |= (0xFFFF << bit_count);
     }
     return x;
 }
@@ -91,7 +88,7 @@ void update_flags(uint16_t r)
     {
         reg[R_COND] = FL_ZRO;
     }
-    else if (reg[r] << 15) /* a 1 in the left-most bit indicates negative */
+    else if (reg[r] >> 15) /* a 1 in the left-most bit indicates negative */
     {
         reg[R_COND] = FL_NEG;
     }
@@ -202,7 +199,7 @@ void ins(uint16_t instr)
         imm_flag = (instr >> 5) & 0x1;
         if (imm_flag)
         {
-            imm5 = sign_extend(instr & 0x1f, 5);
+            imm5 = sign_extend(instr & 0x1F, 5);
         }
         else
         {
@@ -232,7 +229,7 @@ void ins(uint16_t instr)
     {
         if (imm_flag)
         {
-            reg[r0] = reg [r1] + imm5;
+            reg[r0] = reg[r1] + imm5;
         }
         else
         {
@@ -244,7 +241,7 @@ void ins(uint16_t instr)
     {
         if (imm_flag)
         {
-            reg[r0] = reg [r1] & imm5;
+            reg[r0] = reg[r1] & imm5;
         }
         else
         {
@@ -279,13 +276,12 @@ void ins(uint16_t instr)
 
     if (0x4000 & opbit) { reg[r0] = pc_plus_off; } // LEA
 
-    if (0x0008 & opbit) { mem_write(pc_plus_off, reg[0]); } // ST
+    if (0x0008 & opbit) { mem_write(pc_plus_off, reg[r0]); } // ST
 
     if (0x0800 & opbit) { mem_write(mem_read(pc_plus_off), reg[r0]); } // STI
 
     if (0x0080 & opbit) { mem_write(base_plus_off, reg[r0]); } // STR
-
-    if (0x0400 & opbit) // TRAP
+    if (0x8000 & opbit)  // TRAP
     {
         switch (instr & 0xFF)
         {
@@ -324,7 +320,7 @@ void ins(uint16_t instr)
                 /* one char per byte (two bytes per word)
                    here we need to swap back to
                    big endian format */
-                uint16_t *c = memory + reg[R_R0];
+                uint16_t* c = memory + reg[R_R0];
                 while (*c) {
                     char char1 = (*c) & 0xFF;
                     putc(char1, stdout);
@@ -350,10 +346,10 @@ void ins(uint16_t instr)
 }
 
 static void (*op_table[16])(uint16_t) = {
-        ins<0>, ins<1>, ins<2>, ins<3>,
-        ins<4>, ins<5>, ins<6>, ins<7>,
-        nullptr, ins<9>, ins<10>, ins<11>,
-        ins<12>, nullptr, ins<14>, ins<15>,
+    ins<0>, ins<1>, ins<2>, ins<3>,
+    ins<4>, ins<5>, ins<6>, ins<7>,
+    nullptr, ins<9>, ins<10>, ins<11>,
+    ins<12>, nullptr, ins<14>, ins<15>
 };
 
 int main(int argc, const char* argv[])
@@ -383,13 +379,12 @@ int main(int argc, const char* argv[])
     /*  set the PC to starting position
         0x3000 is the default            */
     enum { PC_START = 0x3000 };
-    reg[R_PC] = 0x3000;
+    reg[R_PC] = PC_START;
 
     while(running)
     {
-        // FETCH
-        uint16_t  instr = mem_read(reg[R_PC]++);
-        uint16_t  op = instr >> 12;
+        uint16_t instr = mem_read(reg[R_PC]++);
+        uint16_t op = instr >> 12;
         op_table[op](instr);
     }
 
