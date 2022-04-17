@@ -187,6 +187,121 @@ void handle_interrupt(int signal)
     exit(-2);
 }
 
+int running = 1;
+template <unsigned op>
+void ins(uint16_t instr)
+{
+    uint16_t r0, r1, r2, imm5, imm_flag;
+    uint16_t pc_plus_off, base_plus_off;
+
+    constexpr uint16_t opbit = (1 << op);
+    if (0x4EEE & opbit) { r0 = (instr >> 9) & 0x7; }
+    if (0x12F3 & opbit) { r1 = (instr >> 6) & 0x7; }
+    if (0x0022 & opbit)
+    {
+        imm_flag = (instr >> 5) & 0x1;
+        if (imm_flag)
+        {
+            imm5 = sign_extend(instr & 0x1f, 5);
+        }
+        else
+        {
+            r2 = instr & 0x7;
+        }
+    }
+
+    if (0x00C0 & opbit)
+    {
+        // Base + offset
+        base_plus_off = reg[r1] + sign_extend(instr & 0x3F, 6);
+    }
+
+    if (0x4C0D & opbit)
+    {
+        // Indirect address
+        pc_plus_off = reg[R_PC] + sign_extend(instr & 0x1FF, 9);
+    }
+
+    if (0x0001 & opbit) // BR
+    {
+        uint16_t cond = (instr >> 9) & 0x7;
+        if (cond & reg[R_COND]) { reg[R_PC] = pc_plus_off; }
+    }
+
+    if (0x0002 & opbit) // ADD
+    {
+        if (imm_flag)
+        {
+            reg[r0] = reg [r1] + imm5;
+        }
+        else
+        {
+            reg[r0] = reg[r1] + reg[r2];
+        }
+    }
+
+    if (0x0020 & opbit) // AND
+    {
+        if (imm_flag)
+        {
+            reg[r0] = reg [r1] & imm5;
+        }
+        else
+        {
+            reg[r0] = reg[r1] & reg[r2];
+        }
+    }
+
+    if (0x0200 & opbit) { reg[r0] = ~reg[r1]; } // NOT
+
+    if (0x1000 & opbit) { reg[R_PC] = reg[r1]; } // JMP
+
+    if (0x0010 & opbit) // JSR
+    {
+        uint16_t long_flag = (instr >> 11) & 1;
+        reg[R_R7] = reg[R_PC];
+        if (long_flag)
+        {
+            pc_plus_off = reg[R_PC] + sign_extend(instr & 0x7FF, 11);
+            reg[R_PC] = pc_plus_off;
+        }
+        else
+        {
+            reg[R_PC] = reg[r1];
+        }
+    }
+
+    if (0x0004 & opbit) { reg[r0] = mem_read(pc_plus_off); } // LD
+
+    if (0x0400 & opbit) { reg[r0] = mem_read(mem_read(pc_plus_off)); } // LDI
+
+    if (0x0040 & opbit) { reg[r0] = mem_read(base_plus_off); } // LDR
+
+    if (0x4000 & opbit) { reg[r0] = pc_plus_off; } // LEA
+
+    if (0x0008 & opbit) { mem_write(pc_plus_off, reg[0]); } // ST
+
+    if (0x0800 & opbit) { mem_write(mem_read(pc_plus_off), reg[r0]); } // STI
+
+    if (0x0080 & opbit) { mem_write(base_plus_off, reg[r0]); } // STR
+
+    if (0x0400 & opbit) // TRAP
+    {
+
+    }
+
+    //if (0x0100 & opbit) { } // RTI
+
+    if (0x4666 & opbit) { update_flags(r0); }
+}
+
+static void (*op_table[16])(uint16_t) = {
+        ins<0>, ins<1>, ins<2>, ins<3>,
+        ins<4>, ins<5>, ins<6>, ins<7>,
+        NULL, ins<9>, ins<10>, ins<11>,
+        ins<12>, NULL, ins<14>, ins<15>,
+};
+
 int main(int argc, const char* argv[])
 {
     if(argc < 2)
@@ -216,12 +331,12 @@ int main(int argc, const char* argv[])
     enum { PC_START = 0x3000 };
     reg[R_PC] = 0x3000;
 
-    int running = 1;
     while(running)
     {
         // FETCH
         uint16_t  instr = mem_read(reg[R_PC]++);
         uint16_t  op = instr >> 12;
+        op_table[op](instr);
     }
 
     restore_input_buffering();
