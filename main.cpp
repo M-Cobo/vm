@@ -1,13 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <signal.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
+#include <csignal>
 /* unix */
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <sys/time.h>
+#include <ctime>
 #include <sys/types.h>
 #include <sys/termios.h>
 #include <sys/mman.h>
@@ -136,10 +136,10 @@ uint16_t check_key()
     FD_ZERO(&readfds);
     FD_SET(STDIN_FILENO, &readfds);
 
-    struct timeval timeout;
+    struct timeval timeout{};
     timeout.tv_sec = 0;
     timeout.tv_usec = 0;
-    return select(1, &readfds, NULL, NULL, &timeout) != 0;
+    return select(1, &readfds, nullptr, nullptr, &timeout) != 0;
 }
 
 void mem_write(uint16_t address, uint16_t val)
@@ -287,7 +287,61 @@ void ins(uint16_t instr)
 
     if (0x0400 & opbit) // TRAP
     {
-
+        switch (instr & 0xFF)
+        {
+            case TRAP_GETC: {
+                /* read a single ASCII char */
+                reg[R_R0] = (uint16_t)getchar();
+                update_flags(R_R0);
+                break;
+            }
+            case TRAP_OUT: {
+                putc((char)reg[R_R0], stdout);
+                fflush(stdout);
+                break;
+            }
+            case TRAP_PUTS: {
+                /* one char per word */
+                uint16_t* c = memory + reg[R_R0];
+                while (*c)
+                {
+                    putc((char)*c, stdout);
+                    ++c;
+                }
+                fflush(stdout);
+                break;
+            }
+            case TRAP_IN: {
+                printf("Enter a character: ");
+                char c = getchar();
+                putc(c, stdout);
+                fflush(stdout);
+                reg[R_R0] = (uint16_t)c;
+                update_flags(R_R0);
+                break;
+            }
+            case TRAP_PUTSP: {
+                /* one char per byte (two bytes per word)
+                   here we need to swap back to
+                   big endian format */
+                uint16_t *c = memory + reg[R_R0];
+                while (*c) {
+                    char char1 = (*c) & 0xFF;
+                    putc(char1, stdout);
+                    char char2 = (*c) >> 8;
+                    if (char2) putc(char2, stdout);
+                    ++c;
+                }
+                fflush(stdout);
+                break;
+            }
+            case TRAP_HALT: {
+                puts("HALT");
+                fflush(stdout);
+                running = 0;
+                break;
+            }
+        }
     }
 
     //if (0x0100 & opbit) { } // RTI
@@ -298,8 +352,8 @@ void ins(uint16_t instr)
 static void (*op_table[16])(uint16_t) = {
         ins<0>, ins<1>, ins<2>, ins<3>,
         ins<4>, ins<5>, ins<6>, ins<7>,
-        NULL, ins<9>, ins<10>, ins<11>,
-        ins<12>, NULL, ins<14>, ins<15>,
+        nullptr, ins<9>, ins<10>, ins<11>,
+        ins<12>, nullptr, ins<14>, ins<15>,
 };
 
 int main(int argc, const char* argv[])
